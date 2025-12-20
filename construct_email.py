@@ -149,10 +149,20 @@ def send_email(sender:str, receiver:str, password:str,smtp_server:str,smtp_port:
     def _format_addr(s):
         name, addr = parseaddr(s)
         return formataddr((Header(name, 'utf-8').encode(), addr))
+    # 1) 解析多个收件人（支持逗号/分号分隔，自动去空格/换行）
+    receiver = (receiver or "").strip().replace(";", ",")
+    receiver_list = [addr.strip() for _, addr in getaddresses([receiver]) if addr.strip()]
 
+    # 去重（可选，但很实用：避免重复投递）
+    seen = set()
+    receiver_list = [x for x in receiver_list if not (x in seen or seen.add(x))]
+
+    if not receiver_list:
+        raise ValueError(f"receiver is empty or invalid after parsing: {receiver!r}")
     msg = MIMEText(html, 'html', 'utf-8')
     msg['From'] = _format_addr('arXiv highlights from ykzhang<%s>' % sender)
-    msg['To'] = _format_addr('You <%s>' % receiver)
+    # msg['To'] = _format_addr('You <%s>' % receiver)
+    msg['To'] = ", ".join(receiver_list)  # 仅展示用
     today = datetime.datetime.now().strftime('%Y/%m/%d')
     msg['Subject'] = Header(f'Daily arXiv highlights {today}', 'utf-8').encode()
 
@@ -165,5 +175,6 @@ def send_email(sender:str, receiver:str, password:str,smtp_server:str,smtp_port:
         server = smtplib.SMTP_SSL(smtp_server, smtp_port)
 
     server.login(sender, password)
-    server.sendmail(sender, [receiver], msg.as_string())
+    server.sendmail(sender, receiver_list, msg.as_string())
+    # server.sendmail(sender, [receiver], msg.as_string())
     server.quit()
