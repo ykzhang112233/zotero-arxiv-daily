@@ -3,7 +3,7 @@ import math
 from tqdm import tqdm
 from email.header import Header
 from email.mime.text import MIMEText
-from email.utils import parseaddr, formataddr
+from email.utils import parseaddr, formataddr, getaddresses
 import smtplib
 import datetime
 import time
